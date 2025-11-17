@@ -9,8 +9,8 @@ import json
 
 VERBA_PORT = 8000
 BASE_URL = f"http://localhost:{VERBA_PORT}"
-WEAVIATE_URL = "https://mmljrocuqaechcclhmht6a.c0.europe-west3.gcp.weaviate.cloud"
-WEAVIATE_API_KEY = "cE9ZUzltVEtXS0dNcUdiRF9FVW1iK3lJMThsZTdHNlVya2IyRnUvZWhYbGIzN2U3ektvM1kxVHZXcTQ0PV92MjAw"
+WEAVIATE_URL = "
+WEAVIATE_API_KEY = ""
 
 HEADERS = {"Origin": "http://localhost:8000"}
 
