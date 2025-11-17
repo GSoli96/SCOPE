@@ -1,0 +1,17 @@
+# Escludi tutti i file video
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.wmv
+*.flv
+*.webm
+
+*.json.xz
+*.pyc
+
+# Escludi il contenuto della cartella Potential_target
+Potential_target/**
+
+.DS_Store
+.idea/**
