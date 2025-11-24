@@ -1,0 +1,102 @@
+{
+    "social_sites": {
+        "ln": true,
+        "fb": true,
+        "ig": true,
+        "th": true,
+        "x": true
+    },
+    "image_path": "C:\\Users\\giand\\Desktop\\Soda_United/Input-Examples/imagefolder",
+    "format_input": "imagefolder",
+    "mode": "fast",
+    "show_browser": "False",
+    "peoplelist": [
+        {
+            "first_name": "Bill",
+            "last_name": "Gates",
+            "full_name": "Bill Gates",
+            "original_person_image": "C:\\Users\\giand\\Desktop\\Soda_United\\Input-Examples\\imagefolder\\Bill Gates.jpg",
+            "potential_path_person": "C:\\Users\\giand\\Desktop\\Soda_United\\Potential_target\\Bill Gates",
+            "list_candidate_user_found_fb": [
+                {
+                    "username": "Bill Gates",
+                    "url_profile": "https://www.facebook.com/BillGates",
+                    "local_path_img": "C:\\Users\\giand\\Desktop\\Soda_United\\Potential_target\\Bill Gates\\Facebook\\Bill Gates_0_fb.jpg",
+                    "link_image": "https://scontent-ams2-1.xx.fbcdn.net/v/t39.30808-1/484083741_1235637024593894_3405130113333440975_n.jpg?stp=dst-jpg_s720x720_tt6&_nc_cat=1&ccb=1-7&_nc_sid=2d3e12&_nc_ohc=5X6zvVxT3GIQ7kNvwF2JlYA&_nc_oc=AdnzmuTbndC-81ynXpgzQyU8MdRXJ3N4yCVbEISh0ntfsIj5mjpxlq-v-oX4SmhTrgs&_nc_zt=24&_nc_ht=scontent-ams2-1.xx&_nc_gid=JbQSzF019WkcrQAmJ3hedg&oh=00_AfguBLt0rBhmEmSOJQvOTaHFK9lmADOs3aAhY5TBbcyOGA&oe=6929FCCA"
+                },
+                {
+                    "username": ".Bill Gates",
+                    "url_profile": "https://www.facebook.com/billgates.587211",
+                    "local_path_img": "C:\\Users\\giand\\Desktop\\Soda_United\\Potential_target\\Bill Gates\\Facebook\\.Bill Gates_3_fb.jpg",
+                    "link_image": "https://scontent-ams2-1.xx.fbcdn.net/v/t39.30808-1/584554474_122152513532853271_4028954798349561750_n.jpg?stp=c0.0.480.480a_dst-jpg_s480x479_tt6&_nc_cat=108&ccb=1-7&_nc_sid=111fe6&_nc_ohc=hpgFLAFAsmAQ7kNvwGazgdO&_nc_oc=AdkG8BV35J3cXM3k2gveLKwD-6hGhdD8nygwFvpY37NiMXzNgQjgi54ojfkELjBms70&_nc_zt=24&_nc_ht=scontent-ams2-1.xx&_nc_gid=-mlrSU9Ue92GCKMK5Km4Zg&oh=00_AfgkmWFadDX_B6HmgkWpr4BisrNpe4C9QaDj77pPuUCiaw&oe=692A003D"
+                },
+                {
+                    "username": "Bill Gates",
+                    "url_profile": "https://www.facebook.com/billgatesjr2020",
+                    "local_path_img": "C:\\Users\\giand\\Desktop\\Soda_United\\Potential_target\\Bill Gates\\Facebook\\Bill Gates_5_fb.jpg",
+                    "link_image": "https://scontent-ams2-1.xx.fbcdn.net/v/t39.30808-1/577526982_10103750174288192_4595200296848472059_n.jpg?stp=c0.0.729.729a_dst-jpg_s720x720_tt6&_nc_cat=107&ccb=1-7&_nc_sid=e99d92&_nc_ohc=jaKvEXQjGNEQ7kNvwEqg_09&_nc_oc=AdlX_Q62tfyiHwb-hnS8-Q9qi7rCo8dnKcC_msjq9runStKTH2o0eAEOs0AJPc_hLt4&_nc_zt=24&_nc_ht=scontent-ams2-1.xx&_nc_gid=Q6A-Q998A6asSBMelEjEUQ&oh=00_Afiu-YsF8HceHU0WtSznp9w_VwQnydFL9Asdh5IUaoA0nw&oe=6929E9EB"
+                }
+            ],
+            "list_candidate_user_found_linkedin": [],
+            "list_candidate_user_found_threads": [],
+            "list_candidate_user_found_X": [],
+            "list_candidate_user_found_instagram": [],
+            "social_profiles": {
+                "linkedin": {
+                    "username": "",
+                    "profile": "",
+                    "image": "",
+                    "Link_image": "",
+                    "Face_Recognition_Result": ""
+                },
+                "facebook": {
+                    "username": "",
+                    "profile": "",
+                    "image": "",
+                    "Link_image": "",
+                    "Face_Recognition_Result": ""
+                },
+                "X": {
+                    "username": "",
+                    "profile": "",
+                    "image": "",
+                    "Link_image": "",
+                    "Face_Recognition_Result": ""
+                },
+                "instagram": {
+                    "username": "",
+                    "profile": "",
+                    "image": "",
+                    "Link_image": "",
+                    "Face_Recognition_Result": ""
+                },
+                "threads": {
+                    "user_id": "",
+                    "username": "",
+                    "profile": "",
+                    "image": "",
+                    "Link_image": "",
+                    "Face_Recognition_Result": ""
+                }
+            },
+            "info_facebook": {"Nome": "Stefano"},
+            "info_linkedin": {},
+            "info_X": {
+                "path_tweets": "",
+                "tweets": "",
+                "other_info": ""
+            },
+            "info_threads": {
+                "Path_profile": "",
+                "user_threads": "",
+                "posts": "",
+                "threads_info": ""
+            },
+            "info_instagram": {
+                "Biografia": "",
+                "Sito_Personale": "",
+                "Path_profile": ""
+            }
+        }
+    ]
+}

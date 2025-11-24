@@ -3,6 +3,7 @@ import time
 
 from configuration import accounts
 from finders_modules import linkedinfinder
+
 #
 # Metodo che estrapola le infomazioni sul social Linkedin
 #

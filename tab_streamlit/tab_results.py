@@ -1,23 +1,15 @@
 import os
+import streamlit as st
+from typing import Any, Dict, List
 
 import streamlit as st
+import pandas as pd
+from typing import Any, Dict, List
+import streamlit as st
 from PIL import Image
+import json
+from tab_streamlit.utils_tab import format_social_sites_icons, get_social_svg, is_empty, dict_to_dataframe
 
-# ------------------------------------------------
-# SVG ICONS FOR SOCIALS
-# ------------------------------------------------
-def get_social_svg(platform):
-    platform = platform.lower().strip()
-
-    icons = {
-        "facebook": """<svg width="14" height="14" fill="#1877F2" viewBox="0 0 24 24"><path d="M22 12a10 10 0 1 0-11.5 9.9v-7h-2v-3h2v-2.3c0-2 1.2-3.1 3-3.1.9 0 1.8.1 1.8.1v2h-1c-1 0-1.3.6-1.3 1.2V12h2.2l-.4 3h-1.8v7A10 10 0 0 0 22 12"/></svg>""",
-        "linkedin": """<svg width="14" height="14" fill="#0A66C2" viewBox="0 0 24 24"><path d="M20 2H4C3 2 2 3 2 4v16c0 1 .9 2 2 2h16c1 0 2-1 2-2V4c0-1-.9-2-2-2zM8.3 18H5.6v-8h2.7v8zM7 8.7c-.9 0-1.6-.7-1.6-1.6S6.1 5.6 7 5.6s1.6.7 1.6 1.6S7.9 8.7 7 8.7zm11 9.3h-2.7v-4c0-1 0-2.3-1.4-2.3-1.4 0-1.6 1.1-1.6 2.2v4h-2.7v-8h2.6v1.1h.1c.4-.8 1.3-1.4 2.7-1.4 2.9 0 3.4 1.9 3.4 4.3v4z"/></svg>""",
-        "instagram": """<svg width="14" height="14" fill="#E4405F" viewBox="0 0 24 24"><path d="M12 2.2c3 0 3.3 0 4.4.1 1 .1 1.7.3 2.3.6.6.4 1.1.8 1.6 1.4.5.5 1 1 1.4 1.6.3.6.5 1.3.6 2.3.1 1 .1 1.4.1 4.4s0 3.3-.1 4.4c-.1 1-.3 1.7-.6 2.3-.4.6-.8 1.1-1.4 1.6-.5.5-1 .9-1.6 1.4-.6.3-1.3.5-2.3.6-1 .1-1.4.1-4.4.1s-3.3 0-4.4-.1c-1-.1-1.7-.3-2.3-.6-.6-.4-1.1-.8-1.6-1.4-.5-.5-1-1-1.4-1.6-.3-.6-.5-1.3-.6-2.3C2.2 15.3 2.2 15 2.2 12s0-3.3.1-4.4c.1-1 .3-1.7.6-2.3.4-.6.8-1.1 1.4-1.6.5-.5 1-.9 1.6-1.4.6-.3 1.3-.5 2.3-.6C8.7 2.2 9 2.2 12 2.2m0 3.3A6.5 6.5 0 1 0 18.5 12 6.47 6.47 0 0 0 12 5.5zm6.8-.9a1.5 1.5 0 1 0 1.5 1.5 1.5 1.5 0 0 0-1.5-1.5zM12 8a4 4 0 1 1-4 4 4 4 0 0 1 4-4z"/></svg>""",
-        "x": """<svg width="14" height="14" fill="#fff" viewBox="0 0 24 24"><path d="M18 2h3l-7 8 8 10h-6l-5-6-5 6H0l8-10L1 2h6l4 5 4-5z"/></svg>""",
-        "threads": """<svg width="14" height="14" fill="#000" viewBox="0 0 24 24"><path d="M12 0a12 12 0 1 0 12 12A12 12 0 0 0 12 0zm3.67 17.13a5.31 5.31 0 0 1-3.35 1.17 5.48 5.48 0 0 1-5.31-5.64 5.5 5.5 0 0 1 9.29-3.9l1-.94A7 7 0 0 0 7 12.66a7 7 0 0 0 11.13 5.32z"/></svg>""",
-    }
-
-    return icons.get(platform, "")
 
 # ------------------------------------------------
 # Show thumbnail if exists
@@ -44,15 +36,13 @@ if 'result_find_company' not in st.session_state:
 if 'result_find_user_company' not in st.session_state:
     st.session_state.result_find_user_company = None
 
+with open('tab_streamlit/peoplelist.json', 'r') as f:
+    list_people = json.load(f)
+st.session_state.result_automatic_research = list_people
 # ------------------------------------------------
 # RENDER TAB RISULTATI
 # ------------------------------------------------
 def tab_show_results():
-    import json
-    with open('tab_streamlit/peoplelist.json', 'r') as f:
-        list_people = json.load(f)
-    st.session_state.result_automatic_research = list_people
-
     # Mapping: Nome tab → (risultato, funzione renderer)
     tab_selection = {
         "Results Ricerca Automatica": (
@@ -90,8 +80,9 @@ def tab_show_results():
 
     # 🔹 Disegna la tab corretta
     for (label, (data, renderer)), tab in zip(available_tabs.items(), tabs):
-        with tab:
-            renderer(data)  # ✨ chiama la funzione corretta
+        renderer(data)  # ✨ chiama la funzione corretta
+        st.divider()
+        st.json(data)
 
 def tab_results_manual_single(result):
     st.write("### 👤 Risultati Ricerca Manuale (Singolo Utente)")
@@ -102,9 +93,8 @@ def tab_results_manual_single(result):
     person = result['person']
 
     if person:
-        with st.expander("Person", expanded=False):
-            st.write('All Data')
-            st.write(person)
+        with st.expander(person.get("full_name"), expanded=False):
+            card_single_user(person)
 
 def tab_results_manual_multi(result):
     st.write("### 👥 Risultati Ricerca Manuale (Multi Utente)")
@@ -118,14 +108,23 @@ def tab_results_manual_multi(result):
     for idx in range(people):
         person = people[idx]
         with st.expander(f"{idx}. Person", expanded=True if idx == 0 else False):
-            st.write(person)
+            card_single_user(person)
 
-import streamlit as st
-from typing import Any, Dict, List
-
-import streamlit as st
-import pandas as pd
-from typing import Any, Dict, List
+# ========= MAPPING SOCIAL =========
+PLATFORM_MAP = [
+    ("Facebook", "facebook"),
+    ("LinkedIn", "linkedin"),
+    ("Instagram", "instagram"),
+    ("Threads", "threads"),
+    ("X", "X"),
+]
+CAND_KEY_MAP = {
+    "Facebook": "list_candidate_user_found_fb",
+    "LinkedIn": "list_candidate_user_found_linkedin",
+    "Threads": "list_candidate_user_found_threads",
+    "X": "list_candidate_user_found_X",
+    "Instagram": "list_candidate_user_found_instagram",
+}
 
 def tab_results_automatic(result: Dict[str, Any]):
     st.write("### 🔎 Risultati Ricerca Automatica")
@@ -133,43 +132,6 @@ def tab_results_automatic(result: Dict[str, Any]):
     if result is None:
         st.info("Fai una ricerca per vedere i risultati")
         return
-
-    # ========== Helper ==========
-    def is_empty(v: Any) -> bool:
-        if v is None:
-            return True
-        if isinstance(v, str):
-            return v.strip() == ""
-        if isinstance(v, (list, dict, set, tuple)):
-            return len(v) == 0
-        return False
-
-    def dict_to_dataframe(d: Dict[str, Any]) -> pd.DataFrame:
-        clean_items = [(str(k), str(v)) for k, v in d.items() if not is_empty(v)]
-        if not clean_items:
-            return pd.DataFrame(columns=["Campo", "Valore"])
-        df = pd.DataFrame(clean_items, columns=["Campo", "Valore"])
-        return df
-
-    def format_social_sites(sites: Any) -> str:
-        if not isinstance(sites, dict) or not sites:
-            return "Nessun social specificato"
-        labels = []
-        for k, v in sites.items():
-            if not v:
-                continue
-            name_map = {
-                "x": "X / Twitter",
-                "facebook": "Facebook",
-                "linkedin": "LinkedIn",
-                "instagram": "Instagram",
-                "threads": "Threads",
-            }
-            label = name_map.get(str(k).lower(), str(k))
-            labels.append(label)
-        if not labels:
-            return "Nessun social attivo"
-        return ", ".join(labels)
 
     # ================= TITOLI GENERALI =================
     with st.container(border=True):
@@ -202,7 +164,7 @@ def tab_results_automatic(result: Dict[str, Any]):
 
         with colB:
             st.markdown(" ")
-            st.markdown(f"**Siti social selezionati:** {format_social_sites(social_sites)}")
+            st.markdown(f"**Siti social selezionati:** {format_social_sites_icons(social_sites)}", unsafe_allow_html=True)
             if not is_empty(people_to_search):
                 try:
                     n_people = len(people_to_search)
@@ -299,381 +261,368 @@ def tab_results_automatic(result: Dict[str, Any]):
         f"**Mostrate:** {len(filtered_people)}"
     )
 
-    # ========= MAPPING SOCIAL =========
-    PLATFORM_MAP = [
-        ("Facebook", "facebook"),
-        ("LinkedIn", "linkedin"),
-        ("Instagram", "instagram"),
-        ("Threads", "threads"),
-        ("X", "X"),
-    ]
-    CAND_KEY_MAP = {
-        "Facebook": "list_candidate_user_found_fb",
-        "LinkedIn": "list_candidate_user_found_linkedin",
-        "Threads": "list_candidate_user_found_threads",
-        "X": "list_candidate_user_found_X",
-        "Instagram": "list_candidate_user_found_instagram",
-    }
+
 
     # ========== LOOP PERSONE ==========
-    for p in filtered_people:
-        full_name = p.get("full_name") or f"{p.get('first_name','')} {p.get('last_name','')}"
-        full_name = (full_name or "").strip() or "Utente sconosciuto"
+    for person in filtered_people:
+        card_single_user(person)
 
-        with st.expander(f"👤 {full_name}", expanded=False):
+def card_single_user(p):
+    full_name = p.get("full_name") or f"{p.get('first_name', '')} {p.get('last_name', '')}"
+    full_name = (full_name or "").strip() or "Utente sconosciuto"
 
-            # ====== INFO DI BASE ======
-            st.write("📄 Info di base")
+    with st.expander(f"👤 {full_name}", expanded=False):
 
-            base_container = st.container()
-            with base_container:
-                col1, col2, col3 = st.columns([4, 2, 2])
+        # ====== INFO DI BASE ======
+        st.write("📄 Info di base")
 
-                with col1:
-                    first_name = p.get("first_name", "")
-                    last_name = p.get("last_name", "")
-                    import os
+        base_container = st.container()
+        with base_container:
+            col1, col2, col3 = st.columns([4, 2, 2])
 
-                    pot_path = str(p.get("potential_path_person")).replace(os.getcwd(), '').lstrip('/\\')  # rimuove sia '/' che '\'
+            with col1:
+                first_name = p.get("first_name", "")
+                last_name = p.get("last_name", "")
+                import os
 
-                    name_card = f"""
-                                        <div style="
-                                            background-color:#2b2b2b;
-                                            padding: 12px;
-                                            border-radius: 10px;
-                                            line-height: 1.6;
-                                        ">
-                                            <p><b>Nome completo:</b> {full_name}</p>
-                                            <p><b>File sorgente:</b> {pot_path}</p>
-                                        </div>
-                                        """
-                    st.markdown(name_card, unsafe_allow_html=True)
+                pot_path = str(p.get("potential_path_person")).replace(os.getcwd(), '').lstrip(
+                    '/\\')  # rimuove sia '/' che '\'
 
-                    # altri campi semplici
-                    skip_keys = {
-                        "first_name",
-                        "last_name",
-                        "full_name",
-                        "original_person_image",
-                        "potential_path_person",
-                        "social_profiles",
-                        "info_facebook",
-                        "info_linkedin",
-                        "info_X",
-                        "info_threads",
-                        "info_instagram",
-                        "list_candidate_user_found_fb",
-                        "list_candidate_user_found_linkedin",
-                        "list_candidate_user_found_threads",
-                        "list_candidate_user_found_X",
-                        "list_candidate_user_found_instagram",
-                    }
-                    extra_simple = {}
-                    for k, v in p.items():
-                        if k in skip_keys:
-                            continue
-                        if isinstance(v, (dict, list, tuple, set)):
-                            continue
-                        if is_empty(v):
-                            continue
-                        extra_simple[k] = v
+                name_card = f"""
+                                    <div style="
+                                        background-color:#2b2b2b;
+                                        padding: 12px;
+                                        border-radius: 10px;
+                                        line-height: 1.6;
+                                    ">
+                                        <p><b>Nome completo:</b> {full_name}</p>
+                                        <p><b>File sorgente:</b> {pot_path}</p>
+                                    </div>
+                                    """
+                st.markdown(name_card, unsafe_allow_html=True)
 
-                    if extra_simple:
-                        st.markdown("**Altri campi utente**")
-                        df_extra = dict_to_dataframe(extra_simple)
-                        st.dataframe(df_extra, width='stretch', hide_index=True)
+                # altri campi semplici
+                skip_keys = {
+                    "first_name",
+                    "last_name",
+                    "full_name",
+                    "original_person_image",
+                    "potential_path_person",
+                    "social_profiles",
+                    "info_facebook",
+                    "info_linkedin",
+                    "info_X",
+                    "info_threads",
+                    "info_instagram",
+                    "list_candidate_user_found_fb",
+                    "list_candidate_user_found_linkedin",
+                    "list_candidate_user_found_threads",
+                    "list_candidate_user_found_X",
+                    "list_candidate_user_found_instagram",
+                }
+                extra_simple = {}
+                for k, v in p.items():
+                    if k in skip_keys:
+                        continue
+                    if isinstance(v, (dict, list, tuple, set)):
+                        continue
+                    if is_empty(v):
+                        continue
+                    extra_simple[k] = v
 
-                with col2:
-                    img_path = p.get("original_person_image")
-                    if not is_empty(img_path):
-                        render_image(img_path, caption=full_name)
-                    else:
-                        st.write("Nessuna immagine di base.")
+                if extra_simple:
+                    st.markdown("**Altri campi utente**")
+                    df_extra = dict_to_dataframe(extra_simple)
+                    st.dataframe(df_extra, width='stretch', hide_index=True)
 
-
-            # ========= PROFILI SOCIAL =========
-            st.markdown("### 🔗 Profili social")
-
-            social_profiles = p.get("social_profiles", {}) or {}
-
-            for label, key in PLATFORM_MAP:
-                profile = social_profiles.get(key, {}) or {}
-
-                # info specifiche (facebook, linkedin, X, threads, instagram)
-                if label == "Facebook":
-                    info_block = p.get("info_facebook", {}) or {}
-                elif label == "LinkedIn":
-                    info_block = p.get("info_linkedin", {}) or {}
-                elif label == "X":
-                    info_block = p.get("info_X", {}) or {}
-                elif label == "Threads":
-                    info_block = p.get("info_threads", {}) or {}
-                elif label == "Instagram":
-                    info_block = p.get("info_instagram", {}) or {}
+            with col2:
+                img_path = p.get("original_person_image")
+                if not is_empty(img_path):
+                    render_image(img_path, caption=full_name)
                 else:
-                    info_block = {}
+                    st.write("Nessuna immagine di base.")
 
-                candidate_key = CAND_KEY_MAP.get(label)
-                candidates = p.get(candidate_key, []) or []
+        # ========= PROFILI SOCIAL =========
+        st.markdown("### 🔗 Profili social")
 
-                # Controlla se c'è qualcosa da mostrare
-                has_profile = profile and any(not is_empty(v) for v in profile.values())
-                has_info = isinstance(info_block, dict) and any(not is_empty(v) for v in info_block.values())
-                has_candidates = len(candidates) > 0
+        social_profiles = p.get("social_profiles", {}) or {}
 
-                # per X controlliamo anche i tweets
-                if label == "X" and isinstance(info_block, dict):
-                    tweets = info_block.get("tweets", {}) or {}
-                    if tweets:
-                        has_info = True
+        for label, key in PLATFORM_MAP:
+            profile = social_profiles.get(key, {}) or {}
 
-                if not (has_profile or has_info or has_candidates):
-                    continue
-                canon = label.lower().strip()
-                svg_icon = get_social_svg(canon)
+            # info specifiche (facebook, linkedin, X, threads, instagram)
+            if label == "Facebook":
+                info_block = p.get("info_facebook", {}) or {}
+            elif label == "LinkedIn":
+                info_block = p.get("info_linkedin", {}) or {}
+            elif label == "X":
+                info_block = p.get("info_X", {}) or {}
+            elif label == "Threads":
+                info_block = p.get("info_threads", {}) or {}
+            elif label == "Instagram":
+                info_block = p.get("info_instagram", {}) or {}
+            else:
+                info_block = {}
 
-                with st.expander(f"{label}", expanded=True):
-                    prof_col1, prof_col2 = st.columns([1, 3])
+            candidate_key = CAND_KEY_MAP.get(label)
+            candidates = p.get(candidate_key, []) or []
 
-                    with prof_col1:
-                        img_path_social = profile.get("image")
-                        if not is_empty(img_path_social):
-                            render_image(img_path_social, caption=profile.get("username") or label)
-                        else:
-                            st.write("Nessuna immagine profilo.")
+            # Controlla se c'è qualcosa da mostrare
+            has_profile = profile and any(not is_empty(v) for v in profile.values())
+            has_info = isinstance(info_block, dict) and any(not is_empty(v) for v in info_block.values())
+            has_candidates = len(candidates) > 0
 
-                    def pretty_url(url: str) -> str:
-                        from urllib.parse import urlparse
-                        p = urlparse(url)
-                        # se manca lo schema (es. "example.com/..."), aggiungilo al volo
-                        if not p.netloc:
-                            p = urlparse("https://" + url)
+            # per X controlliamo anche i tweets
+            if label == "X" and isinstance(info_block, dict):
+                tweets = info_block.get("tweets", {}) or {}
+                if tweets:
+                    has_info = True
 
-                        display = p.netloc + p.path  # dominio + path, senza query/fragment
-                        if display.startswith("www."):
-                            display = display[4:]  # togli "www."
-                        return display.rstrip("/")  # togli eventuale "/" finale
+            if not (has_profile or has_info or has_candidates):
+                continue
+            canon = label.lower().strip()
+            svg_icon = get_social_svg(canon)
 
-                    with prof_col2:
-                        other = info_block.get('other_info')
-                        # st.write(other.keys())
-                        if has_profile:
-                            col1, col2 = st.columns([3,2])
-                            username = info_block.get('username')
-                            full_n = info_block['other_info'].get('full_name')
-                            profile = info_block['other_info'].get('url_profile')
-                            with col1:
-                                st.markdown('**Username**: {}'.format(username))
-                                st.caption(pretty_url(profile))
-                            with col2:
-                                st.markdown('**Full Name**: {}'.format(full_n))
-                                st.link_button("**Apri profilo**", profile)
+            with st.expander(f"{label}", expanded=True):
+                prof_col1, prof_col2 = st.columns([1, 3])
 
-                    # --- Info generali del social (tabella) ---
-                    if label != "X":
-                        if has_info:
-                            st.markdown("**📚 Info estratte dal profilo**")
-
-                            df_info = dict_to_dataframe(info_block)
-                            if not df_info.empty:
-                                st.dataframe(df_info, width='stretch', hide_index=True)
+                with prof_col1:
+                    img_path_social = profile.get("image")
+                    if not is_empty(img_path_social):
+                        render_image(img_path_social, caption=profile.get("username") or label)
                     else:
-                        # ====== BLOCCO SPECIFICO X / TWITTER ======
-                        if isinstance(info_block, dict):
-                            path_tweets = info_block.get("path_tweets")
-                            other_info = info_block.get("other_info", {}) or {}
-                            tweets = info_block.get("tweets", {}) or {}
+                        st.write("Nessuna immagine profilo.")
 
-                            # Riepilogo numerico X
-                            if tweets:
-                                total_tweets = len(tweets)
+                def pretty_url(url: str) -> str:
+                    from urllib.parse import urlparse
+                    p = urlparse(url)
+                    # se manca lo schema (es. "example.com/..."), aggiungilo al volo
+                    if not p.netloc:
+                        p = urlparse("https://" + url)
 
-                                posted_times = []
-                                for _, tw in tweets.items():
-                                    pt = tw.get("posted_time") or tw.get("date") or tw.get("datetime")
-                                    if pt:
-                                        posted_times.append(str(pt))
+                    display = p.netloc + p.path  # dominio + path, senza query/fragment
+                    if display.startswith("www."):
+                        display = display[4:]  # togli "www."
+                    return display.rstrip("/")  # togli eventuale "/" finale
 
-                                if posted_times:
-                                    min_time = min(posted_times)
-                                    max_time = max(posted_times)
-                                else:
-                                    min_time = max_time = None
+                with prof_col2:
+                    other = info_block.get('other_info')
+                    # st.write(other.keys())
+                    if has_profile:
+                        col1, col2 = st.columns([3, 2])
+                        username = info_block.get('username')
+                        full_n = info_block['other_info'].get('full_name')
+                        profile = info_block['other_info'].get('url_profile')
+                        with col1:
+                            st.markdown('**Username**: {}'.format(username))
+                            st.caption(pretty_url(profile))
+                        with col2:
+                            st.markdown('**Full Name**: {}'.format(full_n))
+                            st.link_button("**Apri profilo**", profile)
 
-                                def fmt(dt_str):
-                                    from datetime import datetime
-                                    dt = datetime.fromisoformat(dt_str.replace("Z", "+00:00"))
-                                    return dt.strftime("%d-%m-%Y")
+                # --- Info generali del social (tabella) ---
+                if label != "X":
+                    if has_info:
+                        st.markdown("**📚 Info estratte dal profilo**")
 
-                                def fmh(dt_str):
-                                    from datetime import datetime
-                                    dt = datetime.fromisoformat(dt_str.replace("Z", "+00:00"))
-                                    return dt.strftime("%H:%M:%S")
+                        df_info = dict_to_dataframe(info_block)
+                        if not df_info.empty:
+                            st.dataframe(df_info, width='stretch', hide_index=True)
+                else:
+                    # ====== BLOCCO SPECIFICO X / TWITTER ======
+                    if isinstance(info_block, dict):
+                        path_tweets = info_block.get("path_tweets")
+                        other_info = info_block.get("other_info", {}) or {}
+                        tweets = info_block.get("tweets", {}) or {}
 
-                                summary_html_parts = [f"<p><b>Numero totale di tweet:</b> {total_tweets}</p>"]
-                                if min_time and max_time:
-                                    min_fmt = fmt(min_time)
-                                    max_fmt = fmt(max_time)
-                                    summary_html_parts.append(
-                                        f"<p><b>Intervallo temporale:</b> {min_fmt}  →  {max_fmt}</p>"
-                                    )
+                        # Riepilogo numerico X
+                        if tweets:
+                            total_tweets = len(tweets)
 
-                                summary_html = """
-                                <div style="
-                                    background-color:#262626;
-                                    padding: 10px 12px;
-                                    border-radius: 8px;
-                                    margin-top: 10px;
-                                    margin-bottom: 10px;
-                                    line-height: 1.6;
-                                ">
-                                """ + "".join(summary_html_parts) + "</div>"
+                            posted_times = []
+                            for _, tw in tweets.items():
+                                pt = tw.get("posted_time") or tw.get("date") or tw.get("datetime")
+                                if pt:
+                                    posted_times.append(str(pt))
 
-                                # Info generali X (path, altre info)
-                                if not is_empty(path_tweets) or (
-                                        other_info and any(not is_empty(v) for v in other_info.values())):
-                                    with st.expander("📁 Altre info", expanded=False):
-                                        if other_info:
-                                            df_other = dict_to_dataframe(other_info)
-                                            if not df_other.empty:
-                                                st.dataframe(df_other, width='stretch', hide_index=True)
+                            if posted_times:
+                                min_time = min(posted_times)
+                                max_time = max(posted_times)
+                            else:
+                                min_time = max_time = None
 
+                            def fmt(dt_str):
+                                from datetime import datetime
+                                dt = datetime.fromisoformat(dt_str.replace("Z", "+00:00"))
+                                return dt.strftime("%d-%m-%Y")
 
+                            def fmh(dt_str):
+                                from datetime import datetime
+                                dt = datetime.fromisoformat(dt_str.replace("Z", "+00:00"))
+                                return dt.strftime("%H:%M:%S")
 
-                            # ---- BOX TWEET ----
-                            if tweets:
-                                st.markdown("### 🐦 Tweet estratti")
-                                st.markdown(summary_html, unsafe_allow_html=True)
+                            summary_html_parts = [f"<p><b>Numero totale di tweet:</b> {total_tweets}</p>"]
+                            if min_time and max_time:
+                                min_fmt = fmt(min_time)
+                                max_fmt = fmt(max_time)
+                                summary_html_parts.append(
+                                    f"<p><b>Intervallo temporale:</b> {min_fmt}  →  {max_fmt}</p>"
+                                )
 
-                                tweet_items = list(tweets.items())
+                            summary_html = """
+                            <div style="
+                                background-color:#262626;
+                                padding: 10px 12px;
+                                border-radius: 8px;
+                                margin-top: 10px;
+                                margin-bottom: 10px;
+                                line-height: 1.6;
+                            ">
+                            """ + "".join(summary_html_parts) + "</div>"
 
-                                def sort_key(item):
-                                    _tid, tw = item
-                                    pt = tw.get("posted_time") or tw.get("date") or ""
-                                    return str(pt)
+                            # Info generali X (path, altre info)
+                            if not is_empty(path_tweets) or (
+                                    other_info and any(not is_empty(v) for v in other_info.values())):
+                                with st.expander("📁 Altre info", expanded=False):
+                                    if other_info:
+                                        df_other = dict_to_dataframe(other_info)
+                                        if not df_other.empty:
+                                            st.dataframe(df_other, width='stretch', hide_index=True)
 
-                                tweet_items.sort(key=sort_key, reverse=True)
+                        # ---- BOX TWEET ----
+                        if tweets:
+                            st.markdown("### 🐦 Tweet estratti")
+                            st.markdown(summary_html, unsafe_allow_html=True)
 
-                                total = len(tweet_items)
-                                with st.expander(f"Mostra tutti i tweet ({total})", expanded=False):
-                                    from urllib.parse import urlparse
+                            tweet_items = list(tweets.items())
 
-                                    def clean_url(url):
-                                        p = urlparse(url)
-                                        if not p.netloc:
-                                            p = urlparse("https://" + url)
-                                        d = p.netloc.replace("www.", "") + p.path
-                                        return d.rstrip("/")
+                            def sort_key(item):
+                                _tid, tw = item
+                                pt = tw.get("posted_time") or tw.get("date") or ""
+                                return str(pt)
 
-                                    chunk_size = 5
-                                    for start in range(0, total, chunk_size):
-                                        end = min(start + chunk_size, total)
-                                        with st.expander(f"Tweet {start+1}–{end}", expanded=False):
-                                            for _tweet_id, tw in tweet_items[start:end]:
+                            tweet_items.sort(key=sort_key, reverse=True)
 
-                                                text_fields = ["tweet_text", "text", "content"]
-                                                date_fields = ["posted_time", "date", "datetime"]
-                                                url_fields = ["tweet_url", "link", "retweet_link"]
+                            total = len(tweet_items)
+                            with st.expander(f"Mostra tutti i tweet ({total})", expanded=False):
+                                from urllib.parse import urlparse
 
-                                                tweet_text = next(
-                                                    (tw.get(f) for f in text_fields if not is_empty(tw.get(f))), "")
-                                                tweet_date = next(
-                                                    (tw.get(f) for f in date_fields if not is_empty(tw.get(f))), "")
-                                                tweet_url = next(
-                                                    (tw.get(f) for f in url_fields if not is_empty(tw.get(f))), "")
+                                def clean_url(url):
+                                    p = urlparse(url)
+                                    if not p.netloc:
+                                        p = urlparse("https://" + url)
+                                    d = p.netloc.replace("www.", "") + p.path
+                                    return d.rstrip("/")
 
-                                                images = tw.get("images", []) or []
-                                                videos = tw.get("videos", []) or []
+                                chunk_size = 5
+                                for start in range(0, total, chunk_size):
+                                    end = min(start + chunk_size, total)
+                                    with st.expander(f"Tweet {start + 1}–{end}", expanded=False):
+                                        for _tweet_id, tw in tweet_items[start:end]:
 
-                                                # contenitore principale
-                                                st.markdown("### 📄 Informazioni principali")
+                                            text_fields = ["tweet_text", "text", "content"]
+                                            date_fields = ["posted_time", "date", "datetime"]
+                                            url_fields = ["tweet_url", "link", "retweet_link"]
 
-                                                if tweet_date:
-                                                    col1, col2 = st.columns(2)
-                                                    with col1:
-                                                        st.markdown(f"**Data:** {fmt(tweet_date)}")
-                                                    with col2:
-                                                        st.markdown(f"**Ora:** {fmh(tweet_date)}")
+                                            tweet_text = next(
+                                                (tw.get(f) for f in text_fields if not is_empty(tw.get(f))), "")
+                                            tweet_date = next(
+                                                (tw.get(f) for f in date_fields if not is_empty(tw.get(f))), "")
+                                            tweet_url = next(
+                                                (tw.get(f) for f in url_fields if not is_empty(tw.get(f))), "")
 
-                                                if tweet_text:
-                                                    st.markdown(f"{tweet_text}")
+                                            images = tw.get("images", []) or []
+                                            videos = tw.get("videos", []) or []
 
-                                                if tweet_url:
-                                                    st.link_button("Apri tweet", tweet_url, type="primary")
+                                            # contenitore principale
+                                            st.markdown("### 📄 Informazioni principali")
 
-                                                #
-                                                # ---------------------------------------------------------
-                                                # 🔹 EXPANDER → dettagli secondari
-                                                # ---------------------------------------------------------
-                                                with st.expander("Mostra dettagli completi"):
+                                            if tweet_date:
+                                                col1, col2 = st.columns(2)
+                                                with col1:
+                                                    st.markdown(f"**Data:** {fmt(tweet_date)}")
+                                                with col2:
+                                                    st.markdown(f"**Ora:** {fmh(tweet_date)}")
 
-                                                    col1, col2 = st.columns(2)
+                                            if tweet_text:
+                                                st.markdown(f"{tweet_text}")
 
-                                                    # alterna le colonne
-                                                    toggle = True
-                                                    for k, v in tw.items():
-                                                        if k in text_fields + date_fields + url_fields + ["images",
-                                                                                                          "videos"]:
-                                                            continue
-                                                        if is_empty(v):
-                                                            continue
-                                                        if k in ["username", "name", "profile_picture"]:
-                                                            continue
+                                            if tweet_url:
+                                                st.link_button("Apri tweet", tweet_url, type="primary")
 
-                                                        target_col = col1 if toggle else col2
-                                                        target_col.markdown(f"**{k}:** {v}")
+                                            #
+                                            # ---------------------------------------------------------
+                                            # 🔹 EXPANDER → dettagli secondari
+                                            # ---------------------------------------------------------
+                                            with st.expander("Mostra dettagli completi"):
 
-                                                        toggle = not toggle
+                                                col1, col2 = st.columns(2)
 
-                                                    # immagini
-                                                    if images:
-                                                        st.markdown("### 🖼️ Immagini")
-                                                        for i, url in enumerate(images):
-                                                            st.markdown(f"- [Immagine {i + 1}]({url})")
+                                                # alterna le colonne
+                                                toggle = True
+                                                for k, v in tw.items():
+                                                    if k in text_fields + date_fields + url_fields + ["images",
+                                                                                                      "videos"]:
+                                                        continue
+                                                    if is_empty(v):
+                                                        continue
+                                                    if k in ["username", "name", "profile_picture"]:
+                                                        continue
 
-                                                    # video
-                                                    if videos:
-                                                        st.markdown("### 🎥 Video")
-                                                        for i, url in enumerate(videos):
-                                                            st.markdown(f"- [Video {i + 1}]({url})")
+                                                    target_col = col1 if toggle else col2
+                                                    target_col.markdown(f"**{k}:** {v}")
 
-                                                st.markdown("---")
-                    # --- CANDIDATI TROVATI PER SOCIAL ---
-                    if has_candidates:
-                        st.markdown("### 🧩 Candidati trovati")
+                                                    toggle = not toggle
 
-                        for cand in candidates:
-                            st.markdown(
-                                """
-                                <div style="
-                                    background-color:#2b2b2b;
-                                    padding:15px;
-                                    border-radius:10px;
-                                    margin-bottom:12px;
-                                    box-shadow:0 0 8px rgba(0,0,0,0.3);
-                                ">
-                                """,
-                                unsafe_allow_html=True,
-                            )
+                                                # immagini
+                                                if images:
+                                                    st.markdown("### 🖼️ Immagini")
+                                                    for i, url in enumerate(images):
+                                                        st.markdown(f"- [Immagine {i + 1}]({url})")
 
-                            c1, c2 = st.columns([1, 3])
+                                                # video
+                                                if videos:
+                                                    st.markdown("### 🎥 Video")
+                                                    for i, url in enumerate(videos):
+                                                        st.markdown(f"- [Video {i + 1}]({url})")
 
-                            with c1:
-                                img_cand = cand.get("local_path_img") or cand.get("image")
-                                if not is_empty(img_cand):
-                                    render_image(img_cand, caption=cand.get("username", "candidato"))
-                                else:
-                                    st.write("Nessuna immagine candidato.")
+                                            st.markdown("---")
+                # --- CANDIDATI TROVATI PER SOCIAL ---
+                if has_candidates:
+                    st.markdown("### 🧩 Candidati trovati")
 
-                            with c2:
-                                df_cand = dict_to_dataframe(cand)
-                                if not df_cand.empty:
-                                    st.dataframe(df_cand, width='stretch', hide_index=True)
+                    for cand in candidates:
+                        st.markdown(
+                            """
+                            <div style="
+                                background-color:#2b2b2b;
+                                padding:15px;
+                                border-radius:10px;
+                                margin-bottom:12px;
+                                box-shadow:0 0 8px rgba(0,0,0,0.3);
+                            ">
+                            """,
+                            unsafe_allow_html=True,
+                        )
 
-                            st.markdown("</div>", unsafe_allow_html=True)
+                        c1, c2 = st.columns([1, 3])
 
-                    # chiusura box social
-                    st.markdown("</div>", unsafe_allow_html=True)
+                        with c1:
+                            img_cand = cand.get("local_path_img") or cand.get("image")
+                            if not is_empty(img_cand):
+                                render_image(img_cand, caption=cand.get("username", "candidato"))
+                            else:
+                                st.write("Nessuna immagine candidato.")
+
+                        with c2:
+                            df_cand = dict_to_dataframe(cand)
+                            if not df_cand.empty:
+                                st.dataframe(df_cand, width='stretch', hide_index=True)
+
+                        st.markdown("</div>", unsafe_allow_html=True)
+
+                # chiusura box social
+                st.markdown("</div>", unsafe_allow_html=True)
 
 def tab_results_find_user_company(result):
     import pyperclip

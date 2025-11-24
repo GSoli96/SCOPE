@@ -1,19 +1,22 @@
 import os
-from pathlib import Path
 from time import sleep
+
+import pandas as pd
 import streamlit as st
-from tenacity import sleep_using_event
+from PIL import Image
 
 from social_mapper_automatic import socialMapper_AutomaticExecutor
-from tab_streamlit.utils_tab import get_social_svg, _default_imagefolder_if_empty, _persist_uploaded_file
+from tab_streamlit.utils_tab import format_social_sites_icons, _default_imagefolder_if_empty, save_image
 from utils.utils import save_history_entry
+
+out_folder = os.path.join(os.getcwd(), "Input-Examples", "imagefolder")
 
 def tab_automatic():
 
     with st.container():
         st.markdown("**Parametri Face Recognition**")
 
-        c1, c2, = st.columns([1, 1], vertical_alignment="top")
+        c1, c2 = st.columns([1, 1], vertical_alignment="top")
 
         with c1:
             # --- Face Recognition Mode ---
@@ -108,12 +111,7 @@ def tab_automatic():
                     "🖼️ **Image Folder** → Seleziona una cartella contenente immagini "
                     "di riferimento dei soggetti da identificare. "
                     "Ogni immagine rappresenta una persona da confrontare nei social."
-                ),
-                "company": (
-                    "🏢 **Company Name** → Inserisci il nome di un'azienda. "
-                    "Il sistema cercherà automaticamente i profili associati a quella realtà "
-                    "per individuare potenziali dipendenti o collaboratori."
-                ),
+                )
             }
             st.caption(format_desc[format_input])
 
@@ -127,36 +125,91 @@ def tab_automatic():
             elif format_input == "imagefolder":
                 # Inserisci il path della cartella manualmente
                 folder_path = st.text_input("📁 Inserisci il percorso della cartella",
-                                            value=f"{os.getcwd()}/Input-Examples/imagefolder")
+                                            value=os.path.join(os.getcwd(), "Input-Examples", "imagefolder"))
 
                 if folder_path and os.path.isdir(folder_path):
+                    st.success(f"📁 Cartella selezionata: {folder_path}")
                     st.session_state.imagefolder = folder_path
-
-                if "imagefolder" in st.session_state and st.session_state.imagefolder:
-                    st.write(f"📁 Cartella selezionata: {st.session_state.imagefolder}")
-
-
-            elif format_input == "company":
-                company = st.text_input("🏢 Insert Company Name", key="company_name")
-                if company:
-                    st.session_state.company_name = company
-                    st.info(f"🏢 Hai inserito: {company}")
+                else:
+                    st.error('Please select another folder!')
+                    folder_path = None
 
     with st.container():
         # Colonna sinistra: selezione social
         st.markdown("### 📱 Piattaforme Social")
         all_social = st.checkbox("Seleziona Tutti i Social", value=False)
 
-        # Colonne interne per i checkbox
-        col_sx, col_cx, col_dx = st.columns(3)
-        with col_sx:
-            linkedin = st.checkbox("LinkedIn", value=False, disabled=all_social)
+        col1, col2, col3, col4, col5, col6 = st.columns(6)
+        with col1:
+            linkedin = st.checkbox(f"LinkedIn {format_social_sites_icons(sites={'ln':''}, width_height = 20)}", value=False, disabled=all_social)
+        with col2:
             facebook = st.checkbox("Facebook", value=False, disabled=all_social)
-        with col_cx:
+        with col3:
             instagram = st.checkbox("Instagram", value=False, disabled=all_social)
+        with col4:
             threads = st.checkbox("Threads", value=False, disabled=all_social)
-        with col_dx:
-            x_twitter = st.checkbox("X (Twitter)", value=False, disabled=all_social)
+        with col5:
+            x_twitter = st.checkbox("X", value=False, disabled=all_social)
+
+    with st.expander("🧑‍🧑‍🧒 Selected Target", expanded=False):
+        VALID_EXT = (".jpg", ".jpeg", ".png", ".webp")
+
+        if format_input == "csv":
+            if csv_file is not None:
+                input_path = os.path.join(os.getcwd(),"Input-Examples","uploaded",'automatic_csv')
+
+                csv_path = _default_imagefolder_if_empty(input_path)
+                os.makedirs(csv_path, exist_ok=True)
+
+                df = pd.read_csv(csv_file)
+                cols = st.columns(df.shape[0])
+                images = []  # per salvare le path scaricate
+
+                for i, row in df.iterrows():
+                    name = str(row["name"]).strip()
+                    url = str(row["url"]).strip()
+
+                    # Estrai estensione dall'URL
+                    ext = os.path.splitext(url.split("?")[0])[1]  # rimuove querystring
+                    if ext == "":
+                        ext = ".jpg"  # fallback
+
+                    # Path dove salvare immagine
+                    local_path = os.path.join(csv_path, f"{name}{ext}")
+
+                    # Scarica immagine se non esiste
+                    if not os.path.exists(local_path):
+                        save_image(url_image_user=url, local_path_img=local_path)
+
+                    images.append((cols[i], local_path, name))
+
+                # Mostra immagini sulla stessa riga
+                for col, img_path, name in images:
+                    with col:
+                        try:
+                            img = Image.open(img_path).resize((150, 150))
+                            st.image(img, caption=name)
+                        except Exception as e:
+                            st.error(f"Errore con {name}: {e}")
+
+        elif st.session_state.imagefolder and os.path.isdir(st.session_state.imagefolder):
+
+            files = [f for f in os.listdir(st.session_state.imagefolder) if f.lower().endswith(VALID_EXT)]
+
+            if not files:
+                st.warning("Nessuna immagine trovata nella cartella.")
+            else:
+                cols = st.columns(len(files))
+
+                for col, file in zip(cols, sorted(files)):
+                    img_path = os.path.join(st.session_state.imagefolder, file)
+                    img = Image.open(img_path)
+                    img = img.resize((150, 150))
+
+                    caption = os.path.splitext(file)[0]
+
+                    with col:
+                        st.image(img, caption=caption)
 
     # Colonna destra: riepilogo input
     with st.container():
@@ -169,10 +222,9 @@ def tab_automatic():
                 if format_input == "csv":
                     input_detail = f"📄 <b>CSV Caricato:</b> {getattr(st.session_state.get('csv_file'), 'name', 'Nessun file')}"
                 elif format_input == "imagefolder":
-                    folder_name = st.session_state.get('imagefolder', 'Nessuna cartella selezionata').split('/')[-1]
-                    input_detail = f"🖼️ <b>Cartella Immagini:</b> {folder_name}"
-                elif format_input == "company":
-                    input_detail = f"🏢 <b>Company:</b> {st.session_state.get('company_name', 'N/A')}"
+                    folder_name = st.session_state.get('imagefolder', 'No directory selected').split('\\')[-1]
+
+                    input_detail = f"🖼️ <b>Image Directory:</b> {folder_name}"
                 else:
                     input_detail = "N/A"
 
@@ -231,48 +283,43 @@ def tab_automatic():
             # Colonna 4: Social selezionati
             with col_social:
                 if all_social:
-                    social_html = "<li>Tutti</li>"
+                    selected_social = {
+                        "ln": True,
+                        "fb": True,
+                        "ig": True,
+                        "th": True,
+                        "x": True,
+                    }
                 else:
-                    selected_social = [name for name, val in {
-                        "LinkedIn": linkedin,
-                        "Facebook": facebook,
-                        "Instagram": instagram,
-                        "Threads": threads,
-                        "X (Twitter)": x_twitter
+                    selected_social = [(name, val) for name, val in {
+                        "ln": linkedin,
+                        "fb": facebook,
+                        "ig": instagram,
+                        "th": threads,
+                        "x": x_twitter
                     }.items() if val]
 
-                    if selected_social:
-                        items = []
-                        for s in selected_social:
-                            canon_name = s.lower().strip()
+                icons = format_social_sites_icons(
+                    sites=dict(selected_social), width_height = 20) if selected_social else "Choose at least one SN Platform"
 
-                            svg = get_social_svg(canon_name)
-                            items.append(
-                                f'<span style="display:inline-flex;align-items:center;gap:4px;">{svg} {s}</span>')
-                        social_html = "&nbsp; ".join(items)
-                    else:
-                        social_html = "<li>Nessuno</li>"
+                html_block = f"""
+                <div style="
+                    background-color:#373738;
+                    padding: 15px;
+                    border-radius: 10px;
+                    box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
+                    line-height: 1.4;
+                ">
+                    <p>📱 <b>Social Selezionati:</b></p>
+                    <p>{icons}</p>
+                </div>
+                """
 
-                st.markdown(
-                    f"""
-                        <div style="
-                            background-color:#373738;
-                            padding: 15px;
-                            border-radius: 10px;
-                            box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
-                            line-height: 1.6;
-                        ">
-                        <p>📱 <b>Social Selezionati:</b></p>
-                        <ul style="margin-top:0; padding-left:20px;">
-                            {social_html}
-                        </ul>
-                        </div>
-                        """,
-                    unsafe_allow_html=True
-                )
-    st.markdown('###')
+                st.markdown(html_block, unsafe_allow_html=True)
+
     with st.container(border=False):
-        submitted = st.button("▶️ Run SODA (Automatica)")
+        st.markdown('')
+        submitted = st.button("▶️ Run SCOPE (Automatica)")
 
         output_area = st.empty()
 
@@ -288,6 +335,8 @@ def tab_automatic():
 
         if format_input == "imagefolder":
             folder = st.session_state.get("imagefolder")
+            print('Folder: ', folder)
+            print('Format Input: ', format_input)
             if not folder or not os.path.isdir(folder):
                 can_submit = False
                 error_messages.append("❌ Inserisci un percorso valido per la cartella immagini.")
@@ -297,11 +346,7 @@ def tab_automatic():
             error_messages.append("❌ Inserisci il nome della company.")
 
         if format_input == "csv" and csv_file is not None:
-            dest = Path(os.getcwd()) / "Input-Examples" / "uploaded" / csv_file.name
-            saved = _persist_uploaded_file(csv_file, dest)
-            input_path = str(saved)
-
-            image_path = _default_imagefolder_if_empty(input_path)
+            image_path = csv_path
 
         elif format_input == 'imagefolder':
             image_path = folder
@@ -321,7 +366,8 @@ def tab_automatic():
                 st.warning(msg)
         else:
             # Tutto ok, esegui SODA
-            st.success("✅ Tutti i controlli superati, avvio SODA...")
+            st.toast("✅ Tutti i controlli superati.")
+            st.toast("✅ Avvio di SCOPE")
             # Qui puoi inserire la chiamata alla funzione di ricerca automatica
 
             # prepare social_sites dict
@@ -345,13 +391,19 @@ def tab_automatic():
                 threshold=threshold,
             )
 
-            if st.session_state.result_automatic_research is None:
-                st.warning("Torna dopo per i risultati.")
+            if st.session_state.result_automatic_research is None or len(st.session_state.result_automatic_research) == 0:
+                output_area.warning("Torna dopo per i risultati.")
 
             with st.spinner():
-                st.session_state.result_automatic_research = exec_auto.run()
+                try:
+                    results = exec_auto.run()
+                except Exception as e:
+                    print(f"[Automatic] Si è verificato un errore durante l'esecuzione: {str(e)}")
+                    results = {}
+                    
+                st.session_state.result_automatic_research = results
 
-            if st.session_state.result_automatic_research is not None:
+            if st.session_state.result_automatic_research is not None and len(st.session_state.result_automatic_research) > 0:
                 st.success("I risultati sono disponibili.")
                 print('[Automatic] Scrivo st.session_state.result_automatic_research:')
                 print('-' * 30)
@@ -362,3 +414,5 @@ def tab_automatic():
                     'Automatic Research',
                     st.session_state.result_automatic_research,
                     st.session_state.HISTORY_FILE)
+            else:
+                output_area.error(f"❌ Si è verificato un errore durante l'esecuzione")

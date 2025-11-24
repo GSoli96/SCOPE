@@ -23,7 +23,8 @@ from configuration.configuration import Configuration
 from finders_modules.facebookfinder import twoStepVerification
 from utils.candidate import Candidate
 from utils.person import Person
-
+from finders_modules.utils_finder import normalize_name_tokens, save_image
+from finders_modules.utils_finder import twoStepVerification
 
 # Classe concreta che istanzia il crawler per il social Linkedin
 class Linkedinfinder(object):
@@ -268,23 +269,14 @@ class Linkedinfinder(object):
                                 if user_name is not None:
                                     print(f'\t[Linkedin] Username of user {i} Found!')
                                     print(f'\t[Linkedin] Username found: {user_name}')
-                                    import unicodedata
-
-                                    def normalize_name_tokens(s: str):
-                                        import unicodedata
-
-                                        s = s.lower()
-                                        s = ''.join(
-                                            c for c in unicodedata.normalize('NFKD', s)
-                                            if not unicodedata.combining(c)
-                                        )
-                                        tokens = s.split()  # splitta e rimuove spazi multipli
-                                        return sorted(tokens)  # ordina alfabeticamente
-
+                               
                                     user_name_n1 = normalize_name_tokens(user_name)
                                     p_full_name_n2 = normalize_name_tokens(person.full_name)
 
-                                    match = set(user_name_n1) == set(p_full_name_n2)
+                                    user_set = set(user_name_n1)
+                                    person_set = set(p_full_name_n2)
+
+                                    match = user_set.issubset(person_set)
 
                                     if match:
                                         print(f'\t[Linkedin] User {i} Match Found!')
@@ -640,7 +632,7 @@ class Linkedinfinder(object):
         return url_image_user, local_path_img
 
     def save_img(self, url_image_user, local_path_img):
-        self.save_image(url_image_user, local_path_img)
+        save_image(url_image_user, local_path_img)
 
     def find_image(self, user_name):
         sleep(3)
@@ -750,20 +742,6 @@ class Linkedinfinder(object):
                                     except Exception as e:
                                         print('\t\t[Linkedin] Image Not Found - Last Try!')
                                         return None
-
-    def save_image(self, url_image_user, local_path_img):
-        try:
-            response = requests.get(url_image_user, stream=True)
-            response.raise_for_status()
-
-            with open(f'{local_path_img}', 'wb') as out_file:
-                response.raw.decode_content = True
-                shutil.copyfileobj(response.raw, out_file)
-            del response
-
-        except requests.exceptions.RequestException as e:
-            messagebox.showerror('Error', f'Error while create jpg image')
-            pass
 
     def getLinkedinProfile(self, person, user_name, link_to_user, storage_dir_path_local):
 
@@ -877,9 +855,3 @@ if __name__ == '__main__':
                                            link_to_user=link,
                                            storage_dir_path_local=potential_path
                                            )
-
-
-
-
-
-

@@ -18,14 +18,12 @@ PASSWORD = social_account['password']
 
 BASE_PATH = configuration.Configuration.get_instance().get_findcompany_path()
 
-hunter_api = '77bb62dd99275988467975c42ab12429913c5e7c'
-
 import streamlit as st
 from pyhunter import PyHunter
 
 def tab_hunter_search():
 
-    hunter = PyHunter(hunter_api)
+    hunter = PyHunter(st.session_state.hunter_api)
 
     # ---- SELEZIONE MODALITÀ ----
     tab_company, tab_search_p = st.tabs(
@@ -105,9 +103,6 @@ def tab_hunter_search():
                                        result=st.session_state.result_find_company,
                                        path_file=st.session_state.HISTORY_FILE
                                        )
-
-
-
     # ====================================================
     # 2️⃣ RICERCA PERSONA IN AZIENDA (Hunter API)
     # ====================================================

@@ -19,7 +19,8 @@ import sys
 from threading import Thread
 
 from utils.utils import load_from_json
-
+import streamlit as st
+from utils.ManagedThread import ManagedThread
 
 class socialMapper_AutomaticExecutor:
 
@@ -90,8 +91,12 @@ class socialMapper_AutomaticExecutor:
                 print('Formato {}'.format(self.format_input))
 
         print("End initialization...")
-
-        self._execute_social_mapper_logic()
+        try: 
+            self._execute_social_mapper_logic()
+        except Exception as e:
+            traceback.print_exc()
+            print(e)
+            raise Exception('Execution Error!')
 
         utils.save_json_files(self.peoplelist)
 
@@ -141,49 +146,59 @@ class socialMapper_AutomaticExecutor:
             people_to_search=self.people_to_search)
         
         if fb.login():
+            print("[Facebook] {}...".format(self.task_type))
 
-            match self.task_type:
-                case 'Candidate Extraction':
+            if self.task_type == 'Candidate Extraction' or self.task_type == 'Full Search':
+                self.face_recognition_check()
 
-                    print("[Facebook] {}...".format(self.task_type))
-                    
-                    self.peoplelist = fb.pre_processing()
+                self.peoplelist = fb.pre_processing()
 
-                    fb_face_recogn = face_Recognition(threshold= self.threshold, peoplelist= self.peoplelist, platform='facebook', mode=self.mode)
+                fb_face_recogn = face_Recognition(
+                        threshold= self.threshold, 
+                        peoplelist= self.peoplelist, 
+                        platform='facebook', 
+                        mode=self.mode
+                        )
+                
+                self.peoplelist = fb_face_recogn.get_face_recognition_results()
 
-                    self.face_recognition_check()
-
-                    self.peoplelist = fb_face_recogn.user_face_recognition_new()
-
-                    print("[Facebook] {} Done!\n".format(self.task_type))
-
-                case 'Information Extraction':
-
-                    print("[Facebook] {}...".format(self.task_type))
-
+                if self.task_type == 'Full Search':
                     self.peoplelist = fb.collect_information(self.peoplelist)
 
-                    print("\n[Facebook] {} Done!".format(self.task_type))
+            elif self.task_type == 'Information Extraction':
 
-                case 'Full Search':
-                    
-                    print("[Facebook] {}...".format(self.task_type))
+                self.peoplelist = fb.collect_information(self.peoplelist)
 
-                    self.peoplelist = (face_Recognition(threshold= self.threshold, peoplelist= fb.pre_processing(), platform='facebook', mode=self.mode)).user_face_recognition_new() 
-                    self.peoplelist = fb.collect_information(self.peoplelist)
+            print("[Facebook] End {} Facebook...".format(self.task_type))
 
-                    print("[Facebook] End {} Facebook...".format(self.task_type))
         else:
             messagebox.showerror('FB Login Error', 'Error in the Facebook Login')
             
     def face_recognition_check(self):
+        from utils.deep_face_model import downloaded_models
 
-        if self.download_model_th.is_alive():
-            while not self.download_model:
+        if len(downloaded_models) == 0 and not self.download_model_th.is_alive():
+            self.download_model_th = Thread(target=download_deepface_models)
+            self.download_model_th.start()
+        elif self.download_model_th.is_alive():
+            while self.download_model_th.is_alive():
                 print('Model are not yet downloaded. Please Wait...', flush=True)
                 time.sleep(5)
+                if not self.download_model_th.is_alive():
+                    if len(downloaded_models) > 0:
+                        print('Model downloaded successfully.')
+                        self.download_model = True
+                        break
+                    else:
+                        print('Model are not downloaded. Please try again.')
+                        self.download_model = False
+                        break           
+        elif len(downloaded_models) > 0 and not self.download_model_th.is_alive():
+            print('Model downloaded successfully.')
+            self.download_model = True
         else:
-            pass
+            print('Model are not downloaded. Please try again.')
+            self.download_model = False
 
     def _process_instagram(self):
         # Instagram specific logic
@@ -413,11 +428,7 @@ class socialMapper_AutomaticExecutor:
                 traceback.print_exc()
                 print('-' * 30)
 
-        import streamlit as st
-        from utils.ManagedThread import ManagedThread
 
-        if "threads" not in st.session_state:
-            st.session_state.threads = {}
 
         name = f"tweeter_automatic_{len(st.session_state.threads)}"
         mt = ManagedThread(target=start_tweeter, name=name)

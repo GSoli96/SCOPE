@@ -17,6 +17,7 @@ DEEPFACE_MODELS = [
      ".deepface/weights/arcface_weights.h5"),
 ]
 
+downloaded_models = []
 
 def safe_download(url: str, output: str, show_progress=False) -> bool:
     """
@@ -47,12 +48,10 @@ def safe_download(url: str, output: str, show_progress=False) -> bool:
                     if show_progress and total:
                         pct = int(downloaded / total * 100)
                         print(f"\rDownloading {os.path.basename(output)} {pct}%", end="")
-        print("")
         return os.path.exists(output)
     except Exception as e:
         print(f"[!] Download failed: {e}")
         return False
-
 
 def download_deepface_models(show_progress=False):
     """
@@ -61,7 +60,6 @@ def download_deepface_models(show_progress=False):
     """
 
     home = str(Path(os.getenv("DEEPFACE_HOME", Path.home())))
-
     results = {}
     for name, url, rel_path in DEEPFACE_MODELS:
         output = os.path.join(home, rel_path)
@@ -72,7 +70,8 @@ def download_deepface_models(show_progress=False):
 
         print(f"[INFO] Downloading {name}...")
         ok = safe_download(url, output, show_progress)
-        results[name] = ok
         print(f"[OK] {name} saved to: {output}" if ok else f"[ERROR] {name} failed")
+        results[name] = ok
 
-    return results
+        global downloaded_models
+        downloaded_models.append(name)

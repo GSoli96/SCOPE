@@ -135,11 +135,11 @@ class Instagramfinder(object):
     #
     def getInstagramProfiles(self, first_name, last_name, counter=1):
         self.open_search_bar(first_name, last_name, counter)
-        sleep(2)
+        sleep(30)
         profile_picture = {}
 
         try:
-            print("[Instagram] User Extraction For You...")
+            print("[Instagram] User Extraction...")
             third_child_per_te = self.wait.until(EC.presence_of_all_elements_located((By.XPATH, self.xpath_user_list_per_te)))
             sleep(1)
             for element in third_child_per_te:

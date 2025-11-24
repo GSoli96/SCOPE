@@ -1,58 +1,223 @@
 import os
 from pathlib import Path
 
+import pandas as pd
 import streamlit as st
 
 from social_mapper_manual import socialMapper_ManualExecutor
 from social_mapper_manual_multy import socialMapper_ManualExecutor_multiple
-from tab_streamlit.utils_tab import get_social_svg, _persist_uploaded_file, _capture_run, _default_imagefolder_if_empty
+from tab_streamlit.utils_tab import get_social_svg, _capture_run, _default_imagefolder_if_empty, \
+    format_social_sites_icons, single_social_icon, extract_username, clean_dict
 from utils.utils import save_history_entry
 from time import sleep
+import os
+import time
+from pathlib import Path
+from urllib.parse import urlparse, quote
+import streamlit as st
+from itertools import count
 
+count = count()
+content = None
+
+# Session-state: chiavi per i campi così possiamo fare "Carica esempi"
+keys = {
+    "ln": "manual_ln",
+    "fb": "manual_fb",
+    "ig": "manual_ig",
+    "th": "manual_th",
+    "x": "manual_xt",
+    "image": "manual_image_path",
+    "use_adv": "manual_use_advanced",
+    "mode": "manual_mode",
+    "pts": "manual_people_to_search",
+    "task": ["manual_single_task_type", "manual_multi_task_type"],
+}
+
+def user_card(row, single_social_icon, idx):
+    platforms = {
+        "ln": ("LinkedIn", row.get("LinkedIn")),
+        "fb": ("Facebook", row.get("Facebook")),
+        "ig": ("Instagram", row.get("Instagram")),
+        "th": ("Threads", row.get("Threads")),
+        "x":  ("X", row.get("X")),
+    }
+
+    html = f"""<div style="background:#2e2e2e;padding:18px;margin:15px 0;border-radius:12px;
+    box-shadow:0 2px 5px rgba(0,0,0,0.4);">
+    <h4 style="color:white;margin-top:0;">👤 User {idx}</h4>
+    """
+
+    for code, (label, url) in platforms.items():
+        if url and isinstance(url, str) and url.strip():
+            username = extract_username(url)
+            icon = single_social_icon(code, 20)
+
+            html += (
+                "<div style='display:flex;align-items:center;justify-content:space-between;margin:10px 0;'>"
+                "<div style='display:flex;align-items:center;gap:10px;'>"
+                f"{icon}"
+                f"<span style='font-size:15px;color:#ddd;'>{label}:</span>"
+                f"<b style='color:white;'>{username}</b>"
+                "</div>"
+                f"<a href='{url}' target='_blank'>"
+                "<button style='padding:5px 12px;border-radius:6px;background:#444;border:1px solid #666;color:white;cursor:pointer;'>"
+                "🌐 Apri"
+                "</button>"
+                "</a>"
+                "</div>"
+            )
+        else:
+            icon = single_social_icon(code, 20)
+            html += (
+                "<div style='display:flex;align-items:center;justify-content:space-between;margin:10px 0;'>"
+                "<div style='display:flex;align-items:center;gap:10px;'>"
+                f"{icon}"
+                f"<span style='font-size:15px;color:#ddd;'>{label}</span>"
+                f"<b style='color:white;'></b>"
+                "</div>"
+                f"<a href='' target='_blank'>"
+                "<button disabled style='padding:5px 12px;border-radius:6px;background:#444;border:1px solid #666;color:#888;cursor:not-allowed;opacity:0.6;'>"
+                "🌐 Apri"
+                "</button>"
+                "</a>"
+                "</div>"
+            )
+
+
+    html += "</div>"
+
+    st.markdown(html, unsafe_allow_html=True)
+    return {
+        "ln":  row.get("LinkedIn"),
+        "fb":  row.get("Facebook"),
+        "ig":  row.get("Instagram"),
+        "th":  row.get("Threads"),
+        "x":  row.get("X"),
+    }
+
+def show_cards_in_columns(df, single_social_icon, cards_per_row=3):
+
+    rows = df.to_dict(orient="records")   # lista di dict, 1 per riga
+    cols = st.columns(cards_per_row)
+
+    idx = 0
+    social_sites = {}
+    for row in rows:
+        col = cols[idx % cards_per_row]
+        with col:
+            platforms = user_card(row, single_social_icon, idx)
+            social_sites['User_{}'.format(idx)] = platforms
+        idx += 1
+
+    return social_sites
+
+# ---- tab principale ----
 def manual_tab_csv():
 
-    up = st.file_uploader("Oppure carica CSV", type=["csv"], key="csv_multi")
+    # INIT
+    if "csv_content" not in st.session_state:
+        st.session_state.csv_content = None
+    if "csv_sep" not in st.session_state:
+        st.session_state.csv_sep = ","
+
+    col1, col2, col3 = st.columns([8,2,1])
+
+    with col1:
+        st.subheader("📑 Ricerca Manuale — più utenti via CSV")
+
+    with col2:
+        if st.button("📥 Carica esempio"):
+            st.session_state.csv_content = "Input-Examples/users_manual.csv"
+
+    with col3:
+        if st.button("Reset"):
+            st.session_state.csv_content = None
+
+    # -----------------------------
+    # SEPARATORE + FILE UPLOADER
+    # -----------------------------
+    r1c1, r1c2 = st.columns([6, 2])
+
+    with r1c2:
+        if st.session_state.csv_content is None:
+            st.session_state.csv_sep = st.selectbox(
+                "Separatore", [",", ";", "|", "\t"], index=0
+            )
+        else:
+            st.selectbox(
+                "Separatore", [",", ";", "|", "\t"], index=0, disabled=True
+            )
+
+    with r1c1:
+        if st.session_state.csv_content is None:
+            csv_file = st.file_uploader(
+                "Oppure carica CSV",
+                type=["csv"],
+                key="csv_multi_upload"
+            )
+            if csv_file:
+                st.session_state.csv_content = csv_file
+        else:
+            st.file_uploader(
+                "Oppure carica CSV",
+                type=["csv"],
+                key="tmp_", disabled=True
+            )
+
+    # -----------------------------
+    # PREVIEW & CARDS
+    # -----------------------------
+    if st.session_state.csv_content:
+
+        # Leggi CSV
+        if isinstance(st.session_state.csv_content, str):
+            csv = pd.read_csv(st.session_state.csv_content, sep=st.session_state.csv_sep)
+        else:
+            csv = pd.read_csv(st.session_state.csv_content, sep=st.session_state.csv_sep)
+
+        st.markdown("### 👀 Preview user found")
+
+        # --- Cards per ogni utente ---
+        social_sites = show_cards_in_columns(csv, single_social_icon, cards_per_row=3)
+
+    with st.expander('Opzioni avanzate (facoltative)'):
+        st.selectbox("Task Type", ["Candidate Extraction", "Information Extraction", "Full Search"], index=2,
+                     key=keys["task"][1])
 
     submitted_c = st.button("▶️ Run SODA (Manual CSV)")
-
     if submitted_c:
-        if up is not None:
-            dest = Path(os.getcwd()) / "Input-Examples" / "uploaded" / up.name
-            saved = _persist_uploaded_file(up, dest)
-            csv_path = str(saved)
+        st.toast("✅ Tutti i controlli superati.")
+        st.toast("✅ Avvio di SCOPE")
 
-            st.success("✅ Tutti i controlli superati, avvio SODA...")
-            if st.session_state.result_manual_research_multi is None:
-                st.warning("Torna dopo per i risultati.")
+        social_sites = {user: clean_dict(data) for user, data in social_sites.items()}
+        task = st.session_state.get(keys["task"][1], "Candidate Extraction")
+        result_multy = {}
+        with st.spinner():
+            for key, social_site in social_sites.items():
+                st.toast(f"✅ {key} Start!")
+                exec_man = socialMapper_ManualExecutor(
+                            social_sites=social_site,
+                            task_type=task,
+                        )
+                person = exec_man.run()
+                result_multy['people'].append(person['person'].person_to_dict())
+                st.toast(f"✅ {key} Done!")
+            st.session_state.result_manual_research_multi = result_multy
 
-            exec_multi = socialMapper_ManualExecutor_multiple(path_accounts_users=csv_path)
-            with st.spinner():
-                results = exec_multi.run()
-
-                entry = {}
-                entry["people"] = []
-                for idx, person in enumerate(results):
-                    entry["people"].append({
-                        f"{idx}" : person.person_to_dict()
-                    })
-                st.session_state.result_manual_research_multi = entry
-
-            if st.session_state.result_manual_research_multi is not None:
-                st.success("I risultati sono disponibili.")
-                print('[Manual Multy] Scrivo st.session_state.result_manual_research_multi:')
-                print('-' * 30)
-                print(st.session_state.result_manual_research_multi)
-                print('-'*30)
-                sleep(20)
-                save_history_entry(
-                    'Manual Research Multy',
-                    st.session_state.result_manual_research_multi,
-                    st.session_state.HISTORY_FILE)
-        else:
-            st.error("Specificare il file CSV.")
-
-
-
+    if st.session_state.result_manual_research_multi is None:
+        st.warning("Torna dopo per i risultati.")
+    elif st.session_state.result_manual_research_multi is not None:
+        st.success("I risultati sono disponibili.")
+        print('[Manual multy] Scrivo st.session_state.result_manual_research_single:')
+        print('-' * 30)
+        print(st.session_state.result_manual_research_multi)
+        print('-' * 30)
+        sleep(20)
+        save_history_entry(
+            'Manual Research Multy',
+            st.session_state.result_manual_research_multi,
+            st.session_state.HISTORY_FILE)
 
 def manual_tab():
     """
@@ -62,27 +227,6 @@ def manual_tab():
     - Upload multiplo immagini per impostare automaticamente image_path.
     - Opzioni avanzate (facoltative) per mode/people/task_type.
     """
-    import os
-    import time
-    from pathlib import Path
-    from urllib.parse import urlparse, quote
-    import streamlit as st
-
-    # Fallback icon nel caso get_social_svg non sia stata definita altrove
-    def _fallback_svg(name: str) -> str:
-        base = (name or "").strip().lower()[:2] or "?"
-        svg = f'''<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 22 22" role="img" aria-label="{name}">
-  <circle cx="11" cy="11" r="10" fill="#666"/>
-  <text x="11" y="14" text-anchor="middle" font-size="10" font-family="Inter, Arial, sans-serif" fill="#FFFFFF">{base.upper()}</text>
-</svg>'''
-        return svg
-
-    def _svg_uri(name: str) -> str:
-        try:
-            svg = get_social_svg(name)  # usa la funzione globale se presente
-        except Exception:
-            svg = _fallback_svg(name)
-        return f"data:image/svg+xml;utf8,{quote(svg)}"
 
     # Heuristics: riconosce piattaforma da un testo (URL o username) per avvisi/riassegnazioni
     DOMAIN_MAP = {
@@ -117,20 +261,6 @@ def manual_tab():
             return None  # non assertivo
         return None
 
-    # Session-state: chiavi per i campi così possiamo fare "Carica esempi"
-    keys = {
-        "ln": "manual_ln",
-        "fb": "manual_fb",
-        "ig": "manual_ig",
-        "th": "manual_th",
-        "x":  "manual_xt",
-        "image": "manual_image_path",
-        "use_adv": "manual_use_advanced",
-        "mode": "manual_mode",
-        "pts": "manual_people_to_search",
-        "task": "manual_task_type",
-    }
-
     col1, col2, col3 = st.columns([8,2,1])
     with col1:
         st.subheader("✏️ Ricerca Manuale — singolo utente")
@@ -162,34 +292,44 @@ def manual_tab():
 
         # Helpers per rendere una card social
         def render_card(col, code: str, label: str, placeholder: str):
-            svg_uri = _svg_uri(CANON_FULL[code])
+            icons = single_social_icon(code)
+            # svg_uri = _svg_uri(CANON_FULL[code])
             with col.container():
-                st.markdown(
-                    f'<div style="display:flex;align-items:center;gap:8px;">'
-                    f'<img src="{svg_uri}" width="22" height="22"/>'
-                    f'<h4 style="margin:0;">{label}</h4>'
-                    f'</div>',
-                    unsafe_allow_html=True
-                )
+                if code in ['x', 'X']:
+                    st.markdown(
+                        f'<div style="display:flex;align-items:center;gap:8px;">'
+                        f'{icons}'
+                        f'<h4 style="margin:0;"> </h4>'
+                        f'</div>',
+                        unsafe_allow_html=True
+                    )
+                else:
+                    st.markdown(
+                        f'<div style="display:flex;align-items:center;gap:8px;">'
+                        f'{icons}'
+                        f'<h4 style="margin:0;">{label}</h4>'
+                        f'</div>',
+                        unsafe_allow_html=True
+                    )
                 st.text_input(
-                    "URL o username",
+                    "URL or username",
                     key=keys[code],
                     placeholder=placeholder,
                 )
-                st.markdown("---")
 
-        render_card(row1[0], "ln", "LinkedIn", "es. https://www.linkedin.com/in/<utente>")
-        render_card(row1[1], "fb", "Facebook", "es. https://www.facebook.com/<utente>")
-        render_card(row1[2], "ig", "Instagram", "es. https://www.instagram.com/<utente>")
+        render_card(row1[0], "ln", "LinkedIn", "es. https://www.linkedin.com/in/<username>")
+        render_card(row1[1], "fb", "Facebook", "es. https://www.facebook.com/<username>")
+        render_card(row1[2], "ig", "Instagram", "es. https://www.instagram.com/<username>")
 
-        render_card(row2[0], "th", "Threads", "es. https://www.threads.net/@<utente>")
-        render_card(row2[1], "x",  "X (Twitter)", "es. https://x.com/<utente>")
+        render_card(row2[0], "th", "Threads", "es. https://www.threads.net/@<username>")
+        render_card(row2[1], "x",  "X", "es. https://x.com/<username>")
+
         # segnaposto per allineamento a 3 colonne
         with row2[2].container():
             st.markdown("&nbsp;", unsafe_allow_html=True)
 
         with st.expander('Opzioni avanzate (facoltative)'):
-            st.selectbox("Task Type", ["Candidate Extraction", "Information Extraction", "Full Search"], index=2, key=keys["task"])
+            st.selectbox("Task Type", ["Candidate Extraction", "Information Extraction", "Full Search"], index=2, key=keys["task"][0])
 
         # Riepilogo dinamico
         def _val(k): return (st.session_state.get(k) or "").strip()
@@ -241,7 +381,7 @@ def manual_tab():
         # --- Esecuzione executor ---
         # Opzioni avanzate (facoltative)
         try:
-            task = st.session_state.get(keys["task"], "Candidate Extraction")
+            task = st.session_state.get(keys["task"][0], "Candidate Extraction")
             exec_man = socialMapper_ManualExecutor(
                 social_sites=social_sites,
                 task_type=task,
@@ -254,7 +394,7 @@ def manual_tab():
 
             with st.spinner():
                 person = exec_man.run()
-                st.session_state.result_manual_research_single = person.person_to_dict()
+                st.session_state.result_manual_research_single['person'] = person['person'].person_to_dict()
 
             if st.session_state.result_manual_research_single is not None:
                 st.success("I risultati sono disponibili.")

@@ -12,6 +12,11 @@ from Fill_modules import fill_fb
 from Fill_modules.fill_threads import ThreadsInterface
 from utils.person import Person
 from utils.utils import load_from_json
+import streamlit as st
+from utils.ManagedThread import ManagedThread
+
+if "threads" not in st.session_state:
+    st.session_state.threads = {}
 
 class socialMapper_ManualExecutor:
     def __init__(self,
@@ -68,11 +73,9 @@ class socialMapper_ManualExecutor:
             print("STDOUT:", result.stdout)
             print("STDERR:", result.stderr)
 
-        import streamlit as st
-        from utils.ManagedThread import ManagedThread
 
-        if "threads" not in st.session_state:
-            st.session_state.threads = {}
+
+
 
         name = f"tweeter_manual_{len(st.session_state.threads)}"
         mt = ManagedThread(target=start_tweeter, name=name)

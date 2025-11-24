@@ -1,19 +1,41 @@
 {
     "linkedin": {
-        "username": "",
-        "password": ""
+        "username": "ethicspaper46@gmail.com",
+        "password": "ethicspaper46"
     },
     "facebook": {
-        "username": "",
-        "password": ""
+        "username": "social_test@libero.it",
+        "password": "prova_SocialTest1"
     },
     "X": {
-        "username": "",
-        "password": "",
-        "email": ""
+        "username": "social205184",
+        "password": "socialmapper97",
+        "email": "happycasa24@gmail.com"
     },
     "instagram": {
+        "phone_number": "+31645855906",
+        "username": "ldirago253",
+        "password": "Socialmapper24",
+        "full_name": "ldirago25"
+    },
+    "google": {
         "username": "",
         "password": ""
+    },
+    "vk": {
+        "username": "+393935126036",
+        "password": "socialmapper97"
+    },
+    "weibo": {
+        "username": "",
+        "password": ""
+    },
+    "douban": {
+        "username": "",
+        "password": ""
+    },
+    "pinterest": {
+        "username": "socialmappertest@libero.it",
+        "password": "socialmapper97"
     }
 }

@@ -14,6 +14,15 @@ models = ["Facenet",
 
 class face_Recognition:
     def __init__(self, peoplelist, platform, mode, threshold = 0.6):
+        if threshold == "superstrict":
+            threshold = 0.40
+        if threshold == "strict":
+            threshold = 0.50
+        if threshold == "standard":
+            threshold = 0.60
+        if threshold == "loose":
+            threshold = 0.70
+
         self.threshold = threshold
         self.peoplelist = peoplelist
         self.platform = platform
@@ -22,7 +31,11 @@ class face_Recognition:
         print("[Face Recognition] Initializing process...")
         print("[Face Recognition] People in line {} for Platform {}".format(len(self.peoplelist), self.platform))
 
+        self.user_face_recognition_new()
+
     def user_face_recognition_new(self):
+
+        results_people = []
 
         for person in self.peoplelist:
             list_user_to_compare = []
@@ -50,9 +63,11 @@ class face_Recognition:
             else:
                 print(f'[Face Recognition] No matches were found for {person.full_name}!')
 
+            results_people.append(person)
+
         print("[Face Recognition] End Process...\n")
 
-        return self.peoplelist
+        self.peoplelist = results_people
 
     def scan_list_user_to_compare(self, list_user_to_compare, person, threshold):
         self.threshold = threshold
@@ -118,20 +133,16 @@ class face_Recognition:
                         person.social_profiles[self.platform]['Link_image'] = url_image_user
                         person.social_profiles[self.platform]['Face_Recognition_Result'] = maximum_matching_score
 
-                    # print("[Face Recognition] threshold",self.threshold,
-                    #         " - result",result,
-                    #         " - maximum_matching_score",maximum_matching_score,
-                    #         " - user_name",user_name, '\n')
-
                 except Exception as e:
-                    # messagebox.showerror('[Face Recognition]', f"Facee Recognition {e}")
-                    return person 
+                    raise Exception('[Face Recognition]', f"Face Recognition Error: {e}")
             
         return person
 
     def user_face_recognition_original(self):
+
         print("[Face Recognition] People in line {}\n".format(len(self.peoplelist)))
         print("[Face Recognition] Platform {}\n".format(self.platform))
+        results_people = []
 
         for person in self.peoplelist:
             list_user_to_compare = []
@@ -255,4 +266,10 @@ class face_Recognition:
                         if match: print('A person was found for {}!\n'.format(user_name))
                         else: print('No matches were found for {}!\n'.format(user_name))
         
+            results_people.append(person)
+
+        self.peoplelist = results_people
+
+    def get_face_recognition_results(self):
         return self.peoplelist
+

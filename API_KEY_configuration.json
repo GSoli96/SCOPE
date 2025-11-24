@@ -1,0 +1,15 @@
+{
+  "Hunter_API" : {
+                    "hunter_api": "77bb62dd99275988467975c42ab12429913c5e7c"
+                  },
+  "Verba" : {
+    "WEAVIATE_URL" : "https://mmljrocuqaechcclhmht6a.c0.europe-west3.gcp.weaviate.cloud",
+    "WEAVIATE_API_KEY" : "cE9ZUzltVEtXS0dNcUdiRF9FVW1iK3lJMThsZTdHNlVya2IyRnUvZWhYbGIzN2U3ektvM1kxVHZXcTQ0PV92MjAw",
+    "localhost" : "http://localhost:8000"
+    }
+
+
+
+
+
+}

@@ -1,62 +1,10 @@
-import os
 import stat
-import time
-import json
-import os
-from datetime import datetime
+from tkinter import messagebox
+
 from tqdm import tqdm
-import shutil
-import json
 
 from utils.candidate import Candidate
 from utils.person import Person
-
-from tkinter import messagebox
-
-def remove_unmatched_files(folder_path, target_text):
-    """
-    Rimuove tutti i file nella cartella specificata i cui nomi non contengono il testo target.
-
-    :param folder_path: Percorso della cartella da processare
-    :param target_text: Testo da cercare nei nomi dei file
-    """
-    # Verifica che il percorso fornito sia una directory
-    if not os.path.isdir(folder_path):
-        raise ValueError(f"Il percorso {folder_path} non è una directory valida.")
-
-    # Itera su tutti i file nella cartella
-    for file_name in os.listdir(folder_path):
-        file_path = os.path.join(folder_path, file_name)
-
-        # Controlla se è un file (ignora sottocartelle)
-        if os.path.isfile(file_path):
-            # Rimuovi il file se il nome non contiene il target_text
-            if target_text not in file_name:
-                try:
-                    os.remove(file_path)
-                    print(f"Rimosso: {file_path}")
-                except Exception as e:
-                    print(f"Errore durante la rimozione di {file_path}: {e}")
-
-def save_history_entry(task, result, path_file):
-    """Salva una ricerca nello storico."""
-    entry = {
-        "task": task,
-        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "result": result,
-    }
-
-    # Se il file esiste, caricalo
-    if os.path.exists(path_file):
-        data = load_json_safe(path_file)
-    else:
-        data = []
-
-    data.append(entry)
-
-    # Riscrivi il file
-    with open(path_file, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=4)
 
 import json
 import os
@@ -328,3 +276,47 @@ def load_from_json(file_path = None, data = None):
 
     return person
 
+def remove_unmatched_files(folder_path, target_text):
+    """
+    Rimuove tutti i file nella cartella specificata i cui nomi non contengono il testo target.
+
+    :param folder_path: Percorso della cartella da processare
+    :param target_text: Testo da cercare nei nomi dei file
+    """
+    # Verifica che il percorso fornito sia una directory
+    if not os.path.isdir(folder_path):
+        raise ValueError(f"Il percorso {folder_path} non è una directory valida.")
+
+    # Itera su tutti i file nella cartella
+    for file_name in os.listdir(folder_path):
+        file_path = os.path.join(folder_path, file_name)
+
+        # Controlla se è un file (ignora sottocartelle)
+        if os.path.isfile(file_path):
+            # Rimuovi il file se il nome non contiene il target_text
+            if target_text not in file_name:
+                try:
+                    os.remove(file_path)
+                    print(f"Rimosso: {file_path}")
+                except Exception as e:
+                    print(f"Errore durante la rimozione di {file_path}: {e}")
+
+def save_history_entry(task, result, path_file):
+    """Salva una ricerca nello storico."""
+    entry = {
+        "task": task,
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "result": result,
+    }
+
+    # Se il file esiste, caricalo
+    if os.path.exists(path_file):
+        data = load_json_safe(path_file)
+    else:
+        data = []
+
+    data.append(entry)
+
+    # Riscrivi il file
+    with open(path_file, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=4)

@@ -1,26 +1,10 @@
+import os
+import platform
+import subprocess
 import time
 
 import streamlit as st
-import requests
-import subprocess
-import platform
-import os
-import json
-
-VERBA_PORT = 8000
-BASE_URL = f"http://localhost:{VERBA_PORT}"
-WEAVIATE_URL = "
-WEAVIATE_API_KEY = ""
-
-HEADERS = {"Origin": "http://localhost:8000"}
-
-import streamlit as st
 import streamlit.components.v1 as components
-
-import streamlit as st
-import streamlit.components.v1 as components
-
-done = False
 
 def copy_box(label, value, key):
     st.write(f"**{label}**")
@@ -32,26 +16,26 @@ def verba_rag_tab():
         "in modo da poterla usare direttamente dentro SODA United."
     )
 
-    global done
-    if not done:
+    if st.session_state.services_started is False:
+
+        # Avvia Verba una sola volta
         while True:
             out = avvia_verba()
             if out is True:
                 break
-            else:
-                time.sleep(1)
+            time.sleep(1)
+        st.toast("Verba avviato!", icon="✔️")
 
-        st.toast("Verba avviato!" if out is True else out,icon="✔️")
-
+        # Avvia Ollama una sola volta
         while True:
             out = avvia_ollama()
             if out is True:
                 break
-            else:
-                time.sleep(1)
+            time.sleep(1)
+        st.toast("Ollama avviato!", icon="✔️")
 
-        st.toast("Ollama avviato!" if out is True else out, icon="✔️")
-        done = True
+        st.session_state.services_started = True
+        print('TRUE')
 
     with st.container(border=True):
         col1, col2 = st.columns([2,2])
@@ -59,11 +43,11 @@ def verba_rag_tab():
             # URL dell'interfaccia Verba (modifica il default come preferisci)
             verba_url = st.text_input(
                 "URL dell'interfaccia Verba RAG",
-                value="http://localhost:8000",
+                value=st.session_state.verba_localhost,
                 help="Inserisci l'URL dove è esposto il frontend di GoldenVerba/Verba RAG."
             )
 
-            copy_box("Weaviate URL", WEAVIATE_URL, "weaviate_url")
+            copy_box("Weaviate URL", st.session_state.weaviate_url, "weaviate_url")
 
 
         with col2:
@@ -75,7 +59,7 @@ def verba_rag_tab():
                 step=50,
                 help="Regola l'altezza dell'iframe che contiene Verba."
             )
-            copy_box("Weaviate API Key", WEAVIATE_API_KEY, "weaviate_key")
+            copy_box("Weaviate API Key", st.session_state.weaviate_api, "weaviate_key")
     # st.divider()
 
     if not verba_url.strip():

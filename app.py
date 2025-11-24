@@ -1,3 +1,4 @@
+import json
 import os
 import sys
 import threading
@@ -11,7 +12,6 @@ from tab_streamlit.manage_account_tab import account_manager_tab
 from tab_streamlit.manual_tab import manual_tab, manual_tab_csv
 from tab_streamlit.tab_findCompany import tab_hunter_search
 from tab_streamlit.tab_hystory import show_tab_history
-from tab_streamlit.tab_lens import tab_google_lens
 from tab_streamlit.tab_results import tab_show_results
 from tab_streamlit.tab_verba import verba_rag_tab
 from tab_streamlit.utils_tab import _patch_messagebox
@@ -30,14 +30,69 @@ label_map = {
     "facebook": "Facebook",
     "instagram": "Instagram",
     "threads": "Threads",
-    "x": "X (Twitter)",
+    "x": "X",
 }
 HISTORY_FILE = "history\history.json"
+Api_key_file = "API_KEY_configuration.json"
+
+def inizialize():
+    if 'initialized' not in st.session_state:
+        st.session_state['initialized'] = True
+        st.session_state.status = 'Not Running'
+        st.session_state.stop_research = False
+
+    #Result of Automatic
+        # st.session_state.result_automatic_research = None
+
+    #Result of Manual Single
+        st.session_state.result_manual_research_single = None
+
+    #Result of Manual Multy
+        st.session_state.result_manual_research_multi = None
+
+    #Result of find company (Hunter - Spy)
+        st.session_state.result_find_company = None
+
+    #Results of research user (Hunter)
+        st.session_state.result_find_user_company = None
+
+    #Path history file
+        st.session_state.HISTORY_FILE= HISTORY_FILE
+
+        st.session_state.services_started = False
+        st.session_state.monitor_started = False
+        st.session_state.imagefolder = None
+
+        if os.path.exists(Api_key_file):
+            with open(Api_key_file, "r") as f:
+                api_keys = json.load(f)
+
+            # Hunter API
+            hunter_API = api_keys["Hunter_API"]
+            st.session_state.hunter_api = hunter_API['hunter_api']
+
+            # VERBA
+            verba = api_keys["Verba"]
+            st.session_state.weaviate_url = verba['WEAVIATE_URL']
+            st.session_state.weaviate_api = verba['WEAVIATE_API_KEY']
+            st.session_state.verba_localhost = verba['localhost']
+        else:
+            print("File API_KEY_configuration.json non trovato")
+
+        
+        if "monitor_started" not in st.session_state:
+            st.session_state.monitor_started = True
+            monitor = threading.Thread(target=thread_monitor, daemon=True)
+            monitor.start()
+
+        st.session_state.threads = {}
+
+
+
+inizialize()
 
 def thread_monitor():
     while True:
-        if 'threads' not in st.session_state:
-            st.session_state['threads'] = {}
         threads = st.session_state.threads
 
         if not threads:
@@ -65,46 +120,10 @@ def thread_monitor():
 
         # pulizia thread completati o bloccati
         for name in to_remove:
+            st.session_state["threads"][name].join(1)
             del st.session_state["threads"][name]
 
         time.sleep(10)  # controllo ogni 10 secondi
-
-
-def inizialize():
-    # st.session_state.setdefault("Face_Recognition_Mode", 'fast')
-    # st.session_state.setdefault("Threshold", 'standard')
-    st.session_state.imagefolder = ""
-    st.session_state.status = 'Not Running'
-    st.session_state.stop_research = False
-
-    #Result of Automatic
-    st.session_state.result_automatic_research = None
-
-    #Result of Manual Single
-    st.session_state.result_manual_research_single = None
-
-    #Result of Manual Multy
-    st.session_state.result_manual_research_multi = None
-
-    #Result of find company (Hunter - Spy)
-    st.session_state.result_find_company = None
-
-    #Results of research user (Hunter)
-    st.session_state.result_find_user_company = None
-
-    #Path history file
-    st.session_state.HISTORY_FILE= HISTORY_FILE
-
-    #controllo thread
-    st.session_state.threads = {}
-
-    if "monitor_started" not in st.session_state:
-        st.session_state.monitor_started = True
-
-        monitor = threading.Thread(target=thread_monitor, daemon=True)
-        monitor.start()
-
-inizialize()
 
 _patch_messagebox()
 
@@ -128,14 +147,7 @@ st.markdown("""
     div[data-baseweb="tab-list"] button:nth-child(7) { order: 7; }  /* LLM 3 */
     </style>
 """, unsafe_allow_html=True)
-# st.caption("Interfaccia Streamlit per le funzioni esistenti (nessuna modifica alla logica).")
-# st.write(f"**Working directory:** `{os.getcwd()}`")
-# st.divider()
 
-# tab_auto, tab_manual, tab_company, tab_results, tab_lens, tab_verba, tab_hystory, tab_accounts = st.tabs(
-#     ["🔎 Ricerca Automatica", "🧭 Ricerca Manuale", "🏢 Find Company", "Result",
-#      "📷 Google Lens", "💬 Verba", "Hystory" ,"🔐 Account Social"]
-# )
 tab_auto, tab_manual, tab_company, tab_results, tab_verba, tab_hystory, tab_accounts = st.tabs([
             "🔎 Ricerca Automatica",
             "🧭 Ricerca Manuale",
@@ -167,14 +179,12 @@ with tab_manual:
     # TAB: Ricerca Manuale
     # ==============================
     with tab1:
-        # st.subheader("✏️ Ricerca Manuale — singolo utente")
         manual_tab()
 
     # ==============================
     # TAB: Ricerca Manuale (CSV)
     # ==============================
     with tab2:
-        st.subheader("📑 Ricerca Manuale — più utenti via CSV")
         manual_tab_csv()
 
 # # ==============================
